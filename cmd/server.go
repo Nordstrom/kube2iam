@@ -111,8 +111,8 @@ func (s *Server) securityCredentialsHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) roleHandler(w http.ResponseWriter, r *http.Request) {
-	var string roleName // just the role name
-	var string roleARN  // the full role ARN
+	var roleName string // just the role name
+	var roleARN string  // the full role ARN
 
 	remoteIP := parseRemoteAddr(r.RemoteAddr)
 	podRole, err := s.getRole(remoteIP)
