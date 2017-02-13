@@ -111,27 +111,32 @@ func (s *Server) securityCredentialsHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) roleHandler(w http.ResponseWriter, r *http.Request) {
+	var string roleName // just the role name
+	var string roleARN  // the full role ARN
+
 	remoteIP := parseRemoteAddr(r.RemoteAddr)
-	rolearn, err := s.getRole(remoteIP)
-	bits := strings.Split(rolearn, "/")
-	role := bits[len(bits)-1]
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+	podRole, err := s.getRole(remoteIP)
+	bits := strings.Split(podRole, "/")
+	if len(bits) > 1 {
+		// is an arn
+		roleName := bits[len(bits)-1]
+		roleARN := podRole
+	} else {
+		roleName := podRole
+		roleARN := s.iam.roleARN(podRole)
 	}
 
 	vars := mux.Vars(r)
-	if role != vars["role"] {
-		http.Error(w, fmt.Sprintf("Invalid role %s for %s (%s)", vars["role"], remoteIP, role), http.StatusForbidden)
+	if roleName != vars["role"] {
+		http.Error(w, fmt.Sprintf("Invalid role %s for %s (%s)", vars["role"], remoteIP, roleName), http.StatusForbidden)
 		return
 	}
 
-	if !s.store.CheckNamespaceRestriction(rolearn, remoteIP) {
-		http.Error(w, fmt.Sprintf("Role requested %s not valid for namespace of pod at %s", role, remoteIP), http.StatusNotFound)
+	if !s.store.CheckNamespaceRestriction(podRole, remoteIP) {
+		http.Error(w, fmt.Sprintf("Role requested %s not valid for namespace of pod at %s", podRole, remoteIP), http.StatusNotFound)
 		return
 	}
 
-	roleARN := s.iam.roleARN(rolearn)
 	credentials, err := s.iam.assumeRole(roleARN, remoteIP)
 	if err != nil {
 		log.Errorf("Error assuming role %+v for pod at %s", err, remoteIP)
