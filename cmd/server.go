@@ -81,6 +81,23 @@ func (s *Server) getRole(IP string) (string, error) {
 	return role, nil
 }
 
+func (s *Server) debugStoreHandler(w http.ResponseWriter, r *http.Request) {
+	output := make(map[string]interface{})
+
+	output["rolesByIP"] = s.store.DumpRolesByIP()
+	output["rolesByNamespace"] = s.store.DumpRolesByNamespace()
+	output["namespaceByIP"] = s.store.DumpNamespaceByIP()
+
+	o, err := json.Marshal(output)
+	if err != nil {
+		log.Errorf("Error converting debug map to json: %+v", err)
+	}
+
+	if _, err := w.Write(o); err != nil {
+		log.Errorf("Error writing response: %+v", err)
+	}
+}
+
 func (s *Server) securityCredentialsHandler(w http.ResponseWriter, r *http.Request) {
 	remoteIP := parseRemoteAddr(r.RemoteAddr)
 	role, err := s.getRole(remoteIP)
@@ -103,7 +120,7 @@ func (s *Server) roleHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	if role != vars["role"] {
-		http.Error(w, fmt.Sprintf("Invalid role %s for %s", vars["role"], remoteIP), http.StatusForbidden)
+		http.Error(w, fmt.Sprintf("Invalid role %s for %s (%s)", vars["role"], remoteIP, role), http.StatusForbidden)
 		return
 	}
 
@@ -156,6 +173,7 @@ func (s *Server) Run(host, token string, insecure bool) error {
 	s.k8s.watchForNamespaces(newNamespacehandler(model))
 	s.iam = newIAM(s.BaseRoleARN)
 	r := mux.NewRouter()
+	r.Handle("/debug/store", appHandler(s.debugStoreHandler))
 	r.Handle("/{version}/meta-data/iam/security-credentials/", appHandler(s.securityCredentialsHandler))
 	r.Handle("/{version}/meta-data/iam/security-credentials/{role}", appHandler(s.roleHandler))
 	r.Handle("/{path:.*}", appHandler(s.reverseProxyHandler))
