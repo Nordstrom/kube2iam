@@ -131,7 +131,7 @@ func (s *Server) roleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roleARN := s.iam.roleARN(role)
+	roleARN := s.iam.roleARN(rolearn)
 	credentials, err := s.iam.assumeRole(roleARN, remoteIP)
 	if err != nil {
 		log.Errorf("Error assuming role %+v for pod at %s", err, remoteIP)
