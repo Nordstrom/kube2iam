@@ -119,11 +119,11 @@ func (s *Server) roleHandler(w http.ResponseWriter, r *http.Request) {
 	bits := strings.Split(podRole, "/")
 	if len(bits) > 1 {
 		// is an arn
-		roleName := bits[len(bits)-1]
-		roleARN := podRole
+		roleName = bits[len(bits)-1]
+		roleARN = podRole
 	} else {
-		roleName := podRole
-		roleARN := s.iam.roleARN(podRole)
+		roleName = podRole
+		roleARN = s.iam.roleARN(podRole)
 	}
 
 	vars := mux.Vars(r)
