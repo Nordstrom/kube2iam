@@ -112,7 +112,9 @@ func (s *Server) securityCredentialsHandler(w http.ResponseWriter, r *http.Reque
 
 func (s *Server) roleHandler(w http.ResponseWriter, r *http.Request) {
 	remoteIP := parseRemoteAddr(r.RemoteAddr)
-	role, err := s.getRole(remoteIP)
+	rolearn, err := s.getRole(remoteIP)
+	bits := strings.Split(rolearn, "/")
+	role := bits[len(bits)-1]
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
