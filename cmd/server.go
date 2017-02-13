@@ -126,7 +126,7 @@ func (s *Server) roleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !s.store.CheckNamespaceRestriction(role, remoteIP) {
+	if !s.store.CheckNamespaceRestriction(rolearn, remoteIP) {
 		http.Error(w, fmt.Sprintf("Role requested %s not valid for namespace of pod at %s", role, remoteIP), http.StatusNotFound)
 		return
 	}
