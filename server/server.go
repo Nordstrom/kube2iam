@@ -80,6 +80,7 @@ type Server struct {
 	InstanceID                 string
 	HealthcheckFailReason      string
 	healthcheckTicker          *time.Ticker
+	testForce404			   bool
 }
 
 type appHandlerFunc func(*log.Entry, http.ResponseWriter, *http.Request)
@@ -290,6 +291,12 @@ func (s *Server) debugStoreHandler(logger *log.Entry, w http.ResponseWriter, r *
 	write(logger, w, string(o))
 }
 
+func (s *Server) test404Handler(logger *log.Entry, w http.ResponseWriter, r *http.Request) {
+	s.testForce404 = !s.testForce404
+
+	write(logger, w, fmt.Sprintf("%v", s.testForce404))
+}
+
 func (s *Server) securityCredentialsHandler(logger *log.Entry, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Server", "EC2ws")
 	remoteIP := parseRemoteAddr(r.RemoteAddr)
@@ -297,6 +304,14 @@ func (s *Server) securityCredentialsHandler(logger *log.Entry, w http.ResponseWr
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
+	}
+
+	if s.testForce404 {
+		// change role name here.
+		if strings.Contains(roleMapping.Role, "mytestrole") {
+			http.Error(w, fmt.Sprintf("Forced 404, did return %s", roleMapping.Role), http.StatusNotFound)
+			return
+		}
 	}
 
 	// If a base ARN has been supplied and this is not cross-account then
@@ -412,6 +427,8 @@ func (s *Server) Run(host, token, nodeName string, insecure bool) error {
 		metrics.StartMetricsServer(s.MetricsPort)
 	}
 
+	r.Handle("/test404", newAppHandler("test404handler", s.test404Handler))
+
 	// This has to be registered last so that it catches fall-throughs
 	r.Handle("/{path:.*}", newAppHandler("reverseProxyHandler", s.reverseProxyHandler))
 
@@ -438,5 +455,6 @@ func NewServer() *Server {
 		NamespaceRestrictionFormat: defaultNamespaceRestrictionFormat,
 		HealthcheckFailReason:      "Healthcheck not yet performed",
 		IAMRoleSessionTTL:          defaultIAMRoleSessionTTL,
+		testForce404:               true,
 	}
 }

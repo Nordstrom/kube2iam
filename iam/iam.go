@@ -15,6 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/jtblin/kube2iam/metrics"
 	"github.com/karlseguin/ccache"
+	log "github.com/sirupsen/logrus"
+
 )
 
 var cache = ccache.New(ccache.Configure())
@@ -163,6 +165,8 @@ func (iam *Client) AssumeRole(roleARN, externalID string, remoteIP string, sessi
 			return nil, err
 		}
 
+		log.Infof("DEBUG - AWS - %s - %s - %d, %d, %d - %s\n", remoteIP, roleARN, len(*resp.Credentials.AccessKeyId), len(*resp.Credentials.SecretAccessKey), len(*resp.Credentials.SessionToken), resp.Credentials.Expiration.Format("2006-01-02T15:04:05Z"))
+
 		return &Credentials{
 			AccessKeyID:     *resp.Credentials.AccessKeyId,
 			Code:            "Success",
@@ -174,6 +178,7 @@ func (iam *Client) AssumeRole(roleARN, externalID string, remoteIP string, sessi
 		}, nil
 	})
 	if hitCache {
+		log.Infof("DEBUG - Cache - %s - %s - %d, %d, %d - %s\n", remoteIP, roleARN, len(item.Value().(*Credentials).AccessKeyID), len(item.Value().(*Credentials).SecretAccessKey), len(item.Value().(*Credentials).Token), item.Value().(*Credentials).Expiration)
 		metrics.IamCacheHitCount.WithLabelValues(roleARN).Inc()
 	}
 	if err != nil {
